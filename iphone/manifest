@@ -1,0 +1,17 @@
+#
+# this is your module manifest and used by Titanium
+# during compilation, packaging, distribution, etc.
+#
+version: 1.0.0
+apiversion: 2
+description: audio_merger
+author: Nick den Engelsman
+license: Specify your license
+copyright: Copyright (c) 2014 by Your Company
+
+# these should not be edited
+name: audio_merger
+moduleid: com.composrapp.audiomerger
+guid: ff6c04b3-1913-4d3d-b59a-6202ea4be4a6
+platform: iphone
+minsdk: 3.4.0.GA
