@@ -91,13 +91,11 @@
 
     // Set in and output paths
     NSString *audioInput = [TiUtils stringValue:[params objectForKey:@"audioFilesInput"]];
-    NSArray *audioFilesInput = [audioInput componentsSeparatedByString:@","];
-    NSLog(@"[INFO] audioFilesInput %@", audioFilesInput);
     NSString *audioOutput = [TiUtils stringValue:[params objectForKey:@"audioFileOutput"]];
     NSURL *audioFileOutput = [NSURL fileURLWithPath:audioOutput];
     
     // Check if in and output audios are set
-    if (!audioFilesInput || !audioFileOutput) {
+    if (!audioInput || !audioFileOutput) {
         NSLog(@"[ERROR] No audioFilesInput or audioFileOutput");
         [self fireEvent:@"error"];
         return NO;
@@ -106,42 +104,27 @@
     // Remove old audioFileOutput file
     [[NSFileManager defaultManager] removeItemAtURL:audioFileOutput error:NULL];
     
-    // Setup defaults
-    NSError *error = nil;
-    BOOL ok = NO;
-    CMTime nextClipStartTime = kCMTimeZero;
-    
-    // Create AVMutableComposition Object.This object will hold our multiple AVMutableCompositionTrack.
+    // --------------------------------------------
+    // Create AVMutableComposition Object:
+    // This object will hold our multiple
+    // AVMutableCompositionTrack.
+    // --------------------------------------------
     AVMutableComposition *composition = [[AVMutableComposition alloc] init];
 
     AVMutableCompositionTrack *compositionAudioTrack = [composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
     
-    // Loop through audioFilesInput array
-    for (int i = 0; i< [audioFilesInput count]; i++) {
-        // Build the filename with path
-        NSString *key = [audioFilesInput objectAtIndex:i];
-        NSURL *url = [NSURL URLWithString:key];
-        // NSLog(@"[INFO] url %@", url);
-        // Setup AV Asset
-        AVAsset *avAsset = [AVURLAsset URLAssetWithURL:url options:nil];
-        NSArray *tracks = [avAsset tracksWithMediaType:AVMediaTypeAudio];
-        if ([tracks count] == 0)
-            return NO;
-        // Get audio duration
-        CMTimeRange timeRangeInAsset = CMTimeRangeMake(kCMTimeZero, [avAsset duration]);
-        AVAssetTrack *clipAudioTrack = [[avAsset tracksWithMediaType:AVMediaTypeAudio] objectAtIndex:0];
-        // Combine audio
-        ok = [compositionAudioTrack insertTimeRange:timeRangeInAsset ofTrack:clipAudioTrack atTime:nextClipStartTime error:&error];
-        if (!ok) {
-            NSLog(@"[ERROR] Current audio track error: %@", error);
-            [self fireEvent:@"error"];
-        }
-        // Update next audio playback time
-        nextClipStartTime = CMTimeAdd(nextClipStartTime, timeRangeInAsset.duration);
+    // --------------------------------------------
+    // Concatenate, Generate or Merge audio
+    // --------------------------------------------
+    // Concatenate audio
+    if (![self concatenateAudio:compositionAudioTrack audioInput:audioInput]) {
+        NSLog(@"[ERROR] NSFileManager: Could not concatenate audio");
+        [self fireEvent:@"error"];
+        return NO;
     }
     
     // --------------------------------------------
-    // AVAssetExportSession
+    // Create AVAssetExportSession and return audio
     // --------------------------------------------
     // Setup new export session
     AVAssetExportSession *exportSession = [AVAssetExportSession exportSessionWithAsset:composition presetName:AVAssetExportPresetPassthrough];
@@ -202,6 +185,44 @@
              NSLog(@"[ERROR] Could not merge audio %d", exportSession.status);
          }
      }];
+    
+    return YES;
+}
+
+- (BOOL)concatenateAudio:(AVMutableCompositionTrack*)compositionAudioTrack audioInput:(NSString*)audioInput
+{
+    // Format audios string to array
+    NSArray *audioFilesInput = [audioInput componentsSeparatedByString:@","];
+    
+    // Setup defaults
+    NSError *error = nil;
+    BOOL ok = NO;
+    CMTime nextClipStartTime = kCMTimeZero;
+    
+    // Loop through audioFilesInput array
+    for (int i = 0; i< [audioFilesInput count]; i++) {
+        // Build the filename with path
+        NSString *key = [audioFilesInput objectAtIndex:i];
+        NSURL *url = [NSURL URLWithString:key];
+        // NSLog(@"[INFO] url %@", url);
+        // Setup AV Asset
+        AVAsset *avAsset = [AVURLAsset URLAssetWithURL:url options:nil];
+        NSArray *tracks = [avAsset tracksWithMediaType:AVMediaTypeAudio];
+        if ([tracks count] == 0)
+            return NO;
+        // Get audio duration
+        CMTimeRange timeRangeInAsset = CMTimeRangeMake(kCMTimeZero, [avAsset duration]);
+        AVAssetTrack *clipAudioTrack = [[avAsset tracksWithMediaType:AVMediaTypeAudio] objectAtIndex:0];
+        // Combine audio
+        ok = [compositionAudioTrack insertTimeRange:timeRangeInAsset ofTrack:clipAudioTrack atTime:nextClipStartTime error:&error];
+        if (!ok) {
+            NSLog(@"[ERROR] Current audio track error: %@", error);
+            [self fireEvent:@"error"];
+            return NO;
+        }
+        // Update next audio playback time
+        nextClipStartTime = CMTimeAdd(nextClipStartTime, timeRangeInAsset.duration);
+    }
     
     return YES;
 }
