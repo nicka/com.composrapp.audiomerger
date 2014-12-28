@@ -87,16 +87,25 @@
 -(void)mergeAudio:(id)args
 {
     // Retreive params
-    NSDictionary * params = [args objectAtIndex:0];
-
+    NSDictionary *params = [args objectAtIndex:0];
+    
     // Set in and output paths
-    NSString *audioInput = [TiUtils stringValue:[params objectForKey:@"audioFilesInput"]];
+    NSString *mergeType = [TiUtils stringValue:[params objectForKey:@"audioMergeType"]];
     NSString *audioOutput = [TiUtils stringValue:[params objectForKey:@"audioFileOutput"]];
     NSURL *audioFileOutput = [NSURL fileURLWithPath:audioOutput];
     
-    // Check if in and output audios are set
-    if (!audioInput || !audioFileOutput) {
-        NSLog(@"[ERROR] No audioFilesInput or audioFileOutput");
+    NSLog(@"File %@", audioFileOutput);
+    
+    // Check if merge type is set
+    if (!mergeType) {
+        NSLog(@"[ERROR] No audioMergeType specified");
+        [self fireEvent:@"error"];
+        return NO;
+    }
+    
+    // Check if output audio is set
+    if (!audioFileOutput) {
+        NSLog(@"[ERROR] No audioFilesInput or audioFileOutput specified");
         [self fireEvent:@"error"];
         return NO;
     }
@@ -109,25 +118,32 @@
     // This object will hold our multiple
     // AVMutableCompositionTrack.
     // --------------------------------------------
-    AVMutableComposition *composition = [[AVMutableComposition alloc] init];
+    AVMutableComposition *composition = [AVMutableComposition composition];
 
-    AVMutableCompositionTrack *compositionAudioTrack = [composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
-    
     // --------------------------------------------
-    // Concatenate, Generate or Merge audio
+    // Concatenate or Generate audio
     // --------------------------------------------
     // Concatenate audio
-    if (![self concatenateAudio:compositionAudioTrack audioInput:audioInput]) {
-        NSLog(@"[ERROR] NSFileManager: Could not concatenate audio");
-        [self fireEvent:@"error"];
-        return NO;
+    if ([mergeType isEqualToString:@"concatenate"]) {
+        if (![self concatenateAudio:composition params:params]) {
+            NSLog(@"[ERROR] NSFileManager: Could not concatenate audio");
+            [self fireEvent:@"error"];
+            return NO;
+        }
+    // Generate audio
+    } else if ([mergeType isEqualToString:@"generate"]) {
+        if (![self generateAudio:composition params:params]) {
+            NSLog(@"[ERROR] NSFileManager: Could not generate audio");
+            [self fireEvent:@"error"];
+            return NO;
+        }
     }
-    
+
     // --------------------------------------------
     // Create AVAssetExportSession and return audio
     // --------------------------------------------
     // Setup new export session
-    AVAssetExportSession *exportSession = [AVAssetExportSession exportSessionWithAsset:composition presetName:AVAssetExportPresetPassthrough];
+    AVAssetExportSession *exportSession = [AVAssetExportSession exportSessionWithAsset:composition presetName:AVAssetExportPresetAppleM4A];
     
     // Check if exportSession is ready
     if (exportSession == nil) {
@@ -137,60 +153,59 @@
     }
     
     // Set output file type for new audio
-    if ([audioInput containsString:@".mp3"]) {
-        exportSession.outputFileType = @"com.apple.quicktime-movie";
-    } else if ([audioInput containsString:@".wav"]) {
-        exportSession.outputFileType = @"com.microsoft.waveform-audio";
-    } else if ([audioInput containsString:@".m4a"]) {
-        exportSession.outputFileType = AVFileTypeAppleM4A;
-    }
+    exportSession.outputFileType = AVFileTypeAppleM4A;
     
     // Format export path with .mov
     NSString *fileNameWithExtension = audioFileOutput.lastPathComponent;
     NSString *fileName = [fileNameWithExtension stringByDeletingPathExtension];
     NSString *extension = fileNameWithExtension.pathExtension;
     
-    // HACK: Add .mov for .mp3 files
-    NSString *exportUrlStr = audioOutput;
-    // HACK: Add .mov for .mp3 files
-    if ([audioInput containsString:@".mp3"]) {
-        exportUrlStr = [audioOutput stringByReplacingOccurrencesOfString: extension withString:@"mov"];
-    }
-    
     // Generate final export url
+    NSString *exportUrlStr = audioOutput;
     NSURL *exportUrl = [NSURL fileURLWithPath:exportUrlStr];
-    
-    // Remove old cropped audio file
+
+    // Remove old generated audio file
     [[NSFileManager defaultManager] removeItemAtURL:exportUrl error:NULL];
     
     // Set final export audio url
     exportSession.outputURL = exportUrl;
    
-    // Start cropping audio
+    // Save audio
     [exportSession exportAsynchronouslyWithCompletionHandler:^
      {
          if (AVAssetExportSessionStatusCompleted == exportSession.status) {
              // Rename file to desired audio file
              if ([self renameFileFrom:exportUrl to:audioFileOutput]) {
-                 NSLog(@"[INFO] Merged audio");
-                 [self fireEvent:@"success"];
+                 NSLog(@"[INFO] Successfully %@d audio", mergeType);
+                 [self fireEvent:mergeType];
              } else {
-                 NSLog(@"[ERROR] NSFileManager: Could not rename merged audio %@", exportSession.error);
+                 NSLog(@"[ERROR] NSFileManager: Could not rename %@d audio %@", mergeType, exportSession.error);
                  [self fireEvent:@"error"];
              }
          } else if (AVAssetExportSessionStatusFailed == exportSession.status) {
-             NSLog(@"[ERROR] AVAssetExportSessionStatusFailed: Could not merge audio %@", exportSession.error);
+             NSLog(@"[ERROR] AVAssetExportSessionStatusFailed: Could not %@ audio %@", mergeType, exportSession.error);
              [self fireEvent:@"error"];
          } else {
-             NSLog(@"[ERROR] Could not merge audio %d", exportSession.status);
+             NSLog(@"[ERROR] Could not %@ audio %d", mergeType, exportSession.status);
          }
      }];
     
     return YES;
 }
 
-- (BOOL)concatenateAudio:(AVMutableCompositionTrack*)compositionAudioTrack audioInput:(NSString*)audioInput
+- (BOOL)concatenateAudio:(AVMutableComposition*)composition params:(NSDictionary*)params
 {
+    // Create AVMutableCompositionTrack
+    AVMutableCompositionTrack *compositionAudioTrack = [composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
+
+    // Check if audio input is set
+    NSString *audioInput = [TiUtils stringValue:[params objectForKey:@"audioFilesInput"]];
+    if (!audioInput) {
+        NSLog(@"[ERROR] No audioFilesInput specified");
+        [self fireEvent:@"error"];
+        return NO;
+    }
+    
     // Format audios string to array
     NSArray *audioFilesInput = [audioInput componentsSeparatedByString:@","];
     
@@ -204,7 +219,6 @@
         // Build the filename with path
         NSString *key = [audioFilesInput objectAtIndex:i];
         NSURL *url = [NSURL URLWithString:key];
-        // NSLog(@"[INFO] url %@", url);
         // Setup AV Asset
         AVAsset *avAsset = [AVURLAsset URLAssetWithURL:url options:nil];
         NSArray *tracks = [avAsset tracksWithMediaType:AVMediaTypeAudio];
@@ -222,6 +236,72 @@
         }
         // Update next audio playback time
         nextClipStartTime = CMTimeAdd(nextClipStartTime, timeRangeInAsset.duration);
+    }
+    
+    return YES;
+}
+
+- (BOOL)generateAudio:(AVMutableComposition*)composition params:(NSDictionary*)params
+{
+    // Check if audio input is set
+    NSDictionary *audioInput = [params objectForKey:@"audioFilesInput"];
+    if (!audioInput) {
+        NSLog(@"[ERROR] No audioFilesInput specified");
+        [self fireEvent:@"error"];
+        return NO;
+    }
+
+    // Setup defaults
+    NSError *error = nil;
+    BOOL ok = NO;
+    
+    // Loop through audioFilesInput array
+    for (int i = 0; i< [audioInput count]; i++) {
+        // Retreive params
+        NSDictionary *params = [audioInput objectAtIndex:i];
+        // Retreive audio and timings from params
+        NSString *audio = [params objectForKey:@"audio"];
+        NSURL *url = [NSURL URLWithString:audio];
+        NSArray *timings = [params objectForKey:@"timing"];
+        // Loop through timings and combine audio
+        if (![self addAudio:url at:timings composition:composition]) {
+            NSLog(@"[ERROR] AVMutableCompositionTrack: Could add %@", url);
+            [self fireEvent:@"error"];
+            return NO;
+        }
+    }
+    
+    return YES;
+}
+
+- (BOOL)addAudio:(NSURL*)url at:(NSArray*)timings composition:(AVMutableComposition*)composition
+{
+    // Setup defaults
+    NSError *error = nil;
+    BOOL ok = NO;
+
+    // Setup AV Asset
+    AVMutableCompositionTrack *compositionAudioTrack = [composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
+    // [compositionAudioTrack setPreferredVolume:0.8];
+    AVAsset *avAsset = [AVURLAsset URLAssetWithURL:url options:nil];
+    NSArray *tracks = [avAsset tracksWithMediaType:AVMediaTypeAudio];
+    AVAssetTrack *clipAudioTrack = [[avAsset tracksWithMediaType:AVMediaTypeAudio] objectAtIndex:0];
+    
+    // Loop through timings and combine audio
+    for (int i = 0; i< [timings count]; i++) {
+        // Calculate time ranges
+        int time = [timings objectAtIndex:i];
+        CMTime atTime = CMTimeMake(time, 1);
+        CMTimeRange trackRange = CMTimeRangeMake(kCMTimeZero, avAsset.duration);
+        // Combine audio
+        ok = [compositionAudioTrack insertTimeRange:trackRange ofTrack:clipAudioTrack atTime:kCMTimeZero error:nil];
+        if (!ok) {
+            NSLog(@"[ERROR] Current audio track error: %@", error);
+            [self fireEvent:@"error"];
+            return NO;
+        } else {
+            NSLog(@"[INFO] Mixed audio track %@ at time %@", url, time);
+        }
     }
     
     return YES;
