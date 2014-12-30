@@ -31,6 +31,27 @@ var statusLabel = Ti.UI.createLabel({
   opactity: 0
 });
 
+var concatenateBtn = Ti.UI.createButton({
+  bottom: 15,
+  left: 0,
+  width: '50%',
+  title: 'Concatenate audio'
+});
+
+var generateBtn = Ti.UI.createButton({
+  bottom: 15,
+  right: 0,
+  width: '50%',
+  title: 'Generate Audio'
+});
+
+var cropWavBtn = Ti.UI.createButton({
+  bottom: 15,
+  right: 0,
+  width: '33.3%',
+  title: 'Crop wav'
+});
+
 var playbackBtn = Ti.UI.createButton({
   top: '240dp',
   width: Ti.UI.FILL,
@@ -38,11 +59,23 @@ var playbackBtn = Ti.UI.createButton({
 });
 
 win.add(statusLabel);
+win.add(concatenateBtn);
+win.add(generateBtn);
 win.add(playbackBtn);
 
 // --------------------------------------------------------
 // Add button event listeners
 // --------------------------------------------------------
+concatenateBtn.addEventListener('click', function() {
+  statusLabel.text = '';
+  concatenate();
+});
+
+generateBtn.addEventListener('click', function() {
+  statusLabel.text = '';
+  generate();
+});
+
 playbackBtn.addEventListener('click', function() {
   if (outputSound.playing) {
     outputSound.pause();
@@ -60,32 +93,53 @@ playbackBtn.addEventListener('click', function() {
 var concatenateAudios = [
   getResourceFile('1.mp3'),
   getResourceFile('2.mp3'),
-  getResourceFile('3.mp3'),
-  getResourceFile('4.mp3'),
-  getResourceFile('5.mp3'),
-  getResourceFile('6.mp3'),
-  getResourceFile('7.mp3')
+  getResourceFile('3.mp3')
 ].join();
 var concatenatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'concatenated-example.m4a');
-
-// Remove old audio
-if (concatenatedAudio.exists()) concatenatedAudio.deleteFile();
 
 // --------------------------------------------------------
 // Generate audio
 // --------------------------------------------------------
 // Setup in and output files
 var generateAudios = [
-  { audio: getResourceFile('140-drum.mp3'), timing: ['0, 30'] },
-  { audio: getResourceFile('140-guitar.mp3'), timing: ['0, 60'] }
+  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14, 28] },
+  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14, 28, 42] }
 ];
 var generatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'generated-example.m4a');
 
-// Remove old audio
-if (generatedAudio.exists()) generatedAudio.deleteFile();
-
+// --------------------------------------------------------
+// Functions
+// --------------------------------------------------------
 function getResourceFile(filename) {
   return Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, filename).nativePath
+}
+
+function concatenate() {
+  // Remove old audio
+  if (concatenatedAudio.exists()) concatenatedAudio.deleteFile();
+  // Get start time
+  date = new Date();
+  startTime = date.getTime();
+  // Concatenate audio
+  AudioMerger.mergeAudio({
+    audioMergeType: 'concatenate',
+    audioFilesInput: concatenateAudios,
+    audioFileOutput: concatenatedAudio
+  });
+}
+
+function generate() {
+  // Remove old audio
+  if (generatedAudio.exists()) generatedAudio.deleteFile();
+  // Get start time
+  date = new Date();
+  startTime = date.getTime();
+  // Generate audio
+  AudioMerger.mergeAudio({
+    audioMergeType: 'generate',
+    audioFilesInput: generateAudios,
+    audioFileOutput: generatedAudio
+  });
 }
 
 // --------------------------------------------------------
@@ -99,7 +153,7 @@ AudioMerger.addEventListener('concatenate', function() {
   // Update label and audio
   statusLabel.text = 'Concatenated audio in ' + endTime + 's';
   statusLabel.opactity = 1;
-  outputSound.setUrl(concatenatedAudio);
+  outputSound = Ti.Media.createSound({url: concatenatedAudio});
 });
 
 AudioMerger.addEventListener('generate', function() {
@@ -110,7 +164,7 @@ AudioMerger.addEventListener('generate', function() {
   // Update label and audio
   statusLabel.text = 'Generate audio in ' + endTime + 's';
   statusLabel.opactity = 1;
-  outputSound.setUrl(generatedAudio);
+  outputSound = Ti.Media.createSound({url: generatedAudio});
 });
 
 AudioMerger.addEventListener('error', function() {
@@ -122,23 +176,8 @@ AudioMerger.addEventListener('error', function() {
 // Open window and concatenate audio
 // --------------------------------------------------------
 win.addEventListener('open', function() {
-  // Get start time
-  date = new Date();
-  startTime = date.getTime();
-  
- //  // Concatenate audio
-	// AudioMerger.mergeAudio({
- //    audioMergeType: 'concatenate',
-	//   audioFilesInput: concatenateAudios,
-	//   audioFileOutput: concatenatedAudio
-	// });
-
   // Generate audio
-  AudioMerger.mergeAudio({
-    audioMergeType: 'generate',
-    audioFilesInput: generateAudios,
-    audioFileOutput: generatedAudio
-  });
+  generate();
 });
 
 win.open();
