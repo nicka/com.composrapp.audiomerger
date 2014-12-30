@@ -1,8 +1,8 @@
-# iOS Merge audio 
+# iOS - Concatenate or generate audio
 
-Build in support for .mp3, .m4a and .wav files.
+Build in support for `.mp3`, `.m4a` and `.wav` input audio files.
 
-**Usage:**
+### Usage
 
 Add module:
 
@@ -10,35 +10,86 @@ Add module:
 var AudioMerger = require('com.composrapp.audiomerger');
 ```
 
-Specify in and output files:
+Specify audioMergeType, audioFilesInput and audioFileOutput argumnets:
+
+**audioMergeType**
+
+Maybe `concatenate` or `generate`.
+
+**audioFilesInput**
+
+Concatenate example:
 
 ```
-var originalAudios = [
-  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '1.mp3').nativePath,
-  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '2.mp3').nativePath,
-  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '3.mp3').nativePath
+var concatenateAudios = [
+  getResourceFile('1.mp3'),
+  getResourceFile('2.mp3'),
+  getResourceFile('3.mp3')
 ].join();
-var mergedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'merged-example1.mp3');
 ```
 
-Pass arguments to module:
+Generate example:
+
+```
+var generateAudios = [
+  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14, 28] },
+  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14, 28, 42] }
+];
+```
+
+```
+function getResourceFile(filename) {
+  return Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, filename).nativePath
+}
+```
+
+`timings` are currenlty in seconds.
+
+**audioFileOutput**
+
+Should always end with `.m4a`.
+
+Example: 
+
+```
+var concatenatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'example.m4a');
+```
+
+**mergeAudio**
+
+Concatenate audio:
 
 ```
 AudioMerger.mergeAudio({
-  audioFilesInput: originalAudios,
-  audioFileOutput: mergedAudio
+  audioMergeType: 'concatenate',
+  audioFilesInput: concatenateAudios,
+  audioFileOutput: concatenatedAudio
 });
 ```
 
-Listen to events:
+Generate audio:
 
 ```
+AudioMerger.mergeAudio({
+  audioMergeType: 'generate',
+  audioFilesInput: generateAudios,
+  audioFileOutput: generatedAudio
+});
+```
+
+**eventListeners**
+
+```
+AudioMerger.addEventListener('concatenate', function() {
+  Ti.API.info('Concatenated audio');
+});
+
+AudioMerger.addEventListener('generate', function() {
+  Ti.API.info('Generated audio');
+});
+
 AudioMerger.addEventListener('error', function() {
   Ti.API.error('Failed to merge audio');
-});
-
-AudioMerger.addEventListener('success', function() {
-  Ti.API.info('Successfully merged audio');
 });
 ```
 
