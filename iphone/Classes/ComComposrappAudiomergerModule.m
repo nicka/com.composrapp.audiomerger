@@ -246,12 +246,13 @@
     }
     
     // Check for bpm support
-    int intBpm;
+    float intBpm;
     NSString *bpm = [params objectForKey:@"bpm"];
     if (!bpm) {
-        intBpm = 0;
+        intBpm = 0.0;
     } else {
-        intBpm = [bpm intValue];
+        intBpm = [bpm floatValue];
+        intBpm = intBpm * 2;
     }
 
     // Calculate milliseconds per beat
@@ -259,7 +260,7 @@
     if (intBpm == 0) {
         msPerBeat = 0.0;
     } else {
-        msPerBeat = (60 * 1000) / (intBpm * 2);
+        msPerBeat = (60 * 1000) / intBpm;
     }
     
     // Setup defaults
