@@ -22,9 +22,9 @@ Concatenate example:
 
 ```
 var concatenateAudios = [
-  getResourceFile('1.mp3'),
-  getResourceFile('2.mp3'),
-  getResourceFile('3.mp3')
+  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '1.mp3').nativePath,
+  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '2.mp3').nativePath,
+  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '3.mp3').nativePath
 ].join();
 ```
 
@@ -32,18 +32,12 @@ Generate example:
 
 ```
 var generateAudios = [
-  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14000, 28000] },
-  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14000, 28000, 42000] }
+  { audio: Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '140-drum.mp3').nativePath, timings: [0, 14000, 28000] },
+  { audio: Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '140-guitar.mp3').nativePath, timings: [0, 14000, 28000, 42000] }
 ];
 ```
 
-```
-function getResourceFile(filename) {
-  return Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, filename).nativePath
-}
-```
-
-`timings` are in milliseconds.
+If  the `bpm` argument is provided to `mergeAudio({ bpm: 140 })`, `timings` will be handled as **notes**. When `bpm` is not specified they will be handled as **milliseconds**.
 
 **audioFileOutput**
 
@@ -98,8 +92,6 @@ AudioMerger.addEventListener('error', function() {
 Concatenate example:
 
 ```
-var AudioMerger = require('com.composrapp.audiomerger');
-
 var concatenateAudios = [
   Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '1.mp3').nativePath,
   Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '2.mp3').nativePath,
@@ -121,8 +113,6 @@ AudioMerger.addEventListener('concatenate', function() {
 Generate example:
 
 ```
-var AudioMerger = require('com.composrapp.audiomerger');
-
 var generateAudios = [
   { 
     audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-drum.mp3').nativePath,
@@ -146,17 +136,38 @@ AudioMerger.addEventListener('generate', function() {
 });
 ```
 
+Generate example by BPM:
+
+```
+var generateAudios = [
+  { 
+    audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-drum.mp3').nativePath,
+    timings: [64, 128, 192]
+  },
+  { 
+    audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-guitar.mp3').nativePath,
+    timings: [0, 64, 192]
+  }
+];
+var generatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'example.m4a');
+
+AudioMerger.mergeAudio({
+  audioMergeType: 'generate',
+  audioFilesInput: generateAudios,
+  audioFileOutput: generatedAudio,
+  bpm: 140
+});
+
+AudioMerger.addEventListener('generate', function() {
+  Ti.API.info('Concatenated audio');
+});
+```
+
 ### Development
 
 1. Install packages with `npm install`
 2. Update examples in `example/app.js`
 3. Use `gulp ios` to build and test the module
-
-### TODO
-
-1. Cleanup eventListeners.
-2. Add song tempo support
-3. Add note/beat support for audio files
 
 ## License
 

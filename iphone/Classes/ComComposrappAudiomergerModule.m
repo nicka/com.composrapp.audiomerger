@@ -244,7 +244,24 @@
         [self fireEvent:@"error"];
         return NO;
     }
+    
+    // Check for bpm support
+    int intBpm;
+    NSString *bpm = [params objectForKey:@"bpm"];
+    if (!bpm) {
+        intBpm = 0;
+    } else {
+        intBpm = [bpm intValue];
+    }
 
+    // Calculate milliseconds per beat
+    int msPerBeat;
+    if (intBpm == 0) {
+        msPerBeat = 0;
+    } else {
+        msPerBeat = (60 * 1000) / (intBpm * 2);
+    }
+    
     // Setup defaults
     NSError *error = nil;
     BOOL ok = NO;
@@ -258,7 +275,7 @@
         NSURL *url = [NSURL URLWithString:audio];
         NSArray *timings = [params objectForKey:@"timings"];
         // Loop through timings and combine audio
-        if (![self addAudio:url at:timings composition:composition]) {
+        if (![self addAudio:url at:timings composition:composition bpm:intBpm msPerBeat:msPerBeat]) {
             NSLog(@"[ERROR] AVMutableCompositionTrack: Could not add %@", url);
             [self fireEvent:@"error"];
             return NO;
@@ -268,7 +285,7 @@
     return YES;
 }
 
-- (BOOL)addAudio:(NSURL*)url at:(NSArray*)timings composition:(AVMutableComposition*)composition
+- (BOOL)addAudio:(NSURL*)url at:(NSArray*)timings composition:(AVMutableComposition*)composition bpm:(int) bpm msPerBeat:(int)msPerBeat
 {
     // Setup defaults
     NSError *error = nil;
@@ -299,11 +316,19 @@
             return NO;
         } 
         // NSLog(@"[INFO] Mixed audio track %@ at time %d", url, intTime);
-
-        // Add empty audio if needed
-        if (intTime > 0) {
+        
+        // Add empty audio to position track based on timing
+        if (bpm == 0 && intTime > 0) {
+            // Add empty audio by ms
             CMTime start = kCMTimeZero;
             CMTime end = CMTimeMake(intTime, 1000);
+            CMTimeRange silence = CMTimeRangeMake(start, end);
+            [compositionAudioTrack insertEmptyTimeRange:silence];
+        } else {
+            // Add empty audio by beat
+            int beatToMs = intTime * msPerBeat;
+            CMTime start = kCMTimeZero;
+            CMTime end = CMTimeMake(beatToMs, 1000);
             CMTimeRange silence = CMTimeRangeMake(start, end);
             [compositionAudioTrack insertEmptyTimeRange:silence];
         }
