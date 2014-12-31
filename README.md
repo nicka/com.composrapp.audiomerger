@@ -14,7 +14,7 @@ Specify audioMergeType, audioFilesInput and audioFileOutput argumnets:
 
 **audioMergeType**
 
-Maybe `concatenate` or `generate`.
+Use `concatenate` or `generate`.
 
 **audioFilesInput**
 
@@ -93,6 +93,59 @@ AudioMerger.addEventListener('error', function() {
 });
 ```
 
+## Examples
+
+Concatenate example:
+
+```
+var AudioMerger = require('com.composrapp.audiomerger');
+
+var concatenateAudios = [
+  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '1.mp3').nativePath,
+  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '2.mp3').nativePath,
+  Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '3.mp3').nativePath
+].join();
+var concatenatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'example.m4a');
+
+AudioMerger.mergeAudio({
+  audioMergeType: 'concatenate',
+  audioFilesInput: concatenateAudios,
+  audioFileOutput: concatenatedAudio
+});
+
+AudioMerger.addEventListener('concatenate', function() {
+  Ti.API.info('Concatenated audio');
+});
+```
+
+Generate example:
+
+```
+var AudioMerger = require('com.composrapp.audiomerger');
+
+var generateAudios = [
+  { 
+    audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-drum.mp3').nativePath,
+    timings: [0, 14, 28]
+  },
+  { 
+    audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-guitar.mp3').nativePath,
+    timings: [0, 14, 28, 42]
+  }
+];
+var generatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'example.m4a');
+
+AudioMerger.mergeAudio({
+  audioMergeType: 'generate',
+  audioFilesInput: generateAudios,
+  audioFileOutput: generatedAudio
+});
+
+AudioMerger.addEventListener('generate', function() {
+  Ti.API.info('Concatenated audio');
+});
+```
+
 ### Development
 
 1. Install packages with `npm install`
@@ -104,3 +157,21 @@ AudioMerger.addEventListener('error', function() {
 1. Cleanup eventListeners.
 2. Add song tempo support
 3. Add note/beat support for audio files
+
+## License
+
+<pre>
+Copyright 2013-2014 Nick den Engelsman
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</pre>

@@ -174,14 +174,8 @@
     [exportSession exportAsynchronouslyWithCompletionHandler:^
      {
          if (AVAssetExportSessionStatusCompleted == exportSession.status) {
-             // Rename file to desired audio file
-             if ([self renameFileFrom:exportUrl to:audioFileOutput]) {
-                 NSLog(@"[INFO] Successfully %@d audio", mergeType);
-                 [self fireEvent:mergeType];
-             } else {
-                 NSLog(@"[ERROR] NSFileManager: Could not rename %@d audio %@", mergeType, exportSession.error);
-                 [self fireEvent:@"error"];
-             }
+             NSLog(@"[INFO] Successfully %@d audio", mergeType);
+             [self fireEvent:mergeType];
          } else if (AVAssetExportSessionStatusFailed == exportSession.status) {
              NSLog(@"[ERROR] AVAssetExportSessionStatusFailed: Could not %@ audio %@", mergeType, exportSession.error);
              [self fireEvent:@"error"];
@@ -313,20 +307,6 @@
             CMTimeRange silence = CMTimeRangeMake(start, end);
             [compositionAudioTrack insertEmptyTimeRange:silence];
         }
-    }
-    
-    return YES;
-}
-
-- (BOOL)renameFileFrom:(NSURL*)oldPath to:(NSURL*)newPath
-{
-    NSString *oldFile = [oldPath path];
-    NSString *newFile = [newPath path];
-    NSError *error = nil;
-    
-    if (![[NSFileManager defaultManager] moveItemAtPath:oldFile toPath:newFile error:&error]) {
-        NSLog(@"[ERROR] Failed to move '%@' to '%@': %@", oldPath, newPath, [error localizedDescription]);
-        return NO;
     }
     
     return YES;
