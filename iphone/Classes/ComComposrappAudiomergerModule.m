@@ -303,7 +303,7 @@
         // Add empty audio if needed
         if (intTime > 0) {
             CMTime start = kCMTimeZero;
-            CMTime end = CMTimeMake(intTime, 1);
+            CMTime end = CMTimeMake(intTime, 1000);
             CMTimeRange silence = CMTimeRangeMake(start, end);
             [compositionAudioTrack insertEmptyTimeRange:silence];
         }

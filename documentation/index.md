@@ -32,8 +32,8 @@ Generate example:
 
 ```
 var generateAudios = [
-  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14, 28] },
-  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14, 28, 42] }
+  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14000, 28000] },
+  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14000, 28000, 42000] }
 ];
 ```
 
@@ -43,7 +43,7 @@ function getResourceFile(filename) {
 }
 ```
 
-`timings` are currenlty in seconds.
+`timings` are in milliseconds.
 
 **audioFileOutput**
 

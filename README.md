@@ -32,8 +32,8 @@ Generate example:
 
 ```
 var generateAudios = [
-  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14, 28] },
-  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14, 28, 42] }
+  { audio: getResourceFile('140-drum.mp3'), timings: [0, 14000, 28000] },
+  { audio: getResourceFile('140-guitar.mp3'), timings: [0, 14000, 28000, 42000] }
 ];
 ```
 
@@ -43,7 +43,7 @@ function getResourceFile(filename) {
 }
 ```
 
-`timings` are currenlty in seconds.
+`timings` are in milliseconds.
 
 **audioFileOutput**
 
@@ -126,11 +126,11 @@ var AudioMerger = require('com.composrapp.audiomerger');
 var generateAudios = [
   { 
     audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-drum.mp3').nativePath,
-    timings: [0, 14, 28]
+    timings: [0, 14000, 28000]
   },
   { 
     audio: Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, '140-guitar.mp3').nativePath,
-    timings: [0, 14, 28, 42]
+    timings: [0, 14000, 28000, 42000]
   }
 ];
 var generatedAudio = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, 'example.m4a');
