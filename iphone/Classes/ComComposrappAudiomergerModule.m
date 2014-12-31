@@ -255,9 +255,9 @@
     }
 
     // Calculate milliseconds per beat
-    int msPerBeat;
+    float msPerBeat;
     if (intBpm == 0) {
-        msPerBeat = 0;
+        msPerBeat = 0.0;
     } else {
         msPerBeat = (60 * 1000) / (intBpm * 2);
     }
@@ -285,7 +285,7 @@
     return YES;
 }
 
-- (BOOL)addAudio:(NSURL*)url at:(NSArray*)timings composition:(AVMutableComposition*)composition bpm:(int) bpm msPerBeat:(int)msPerBeat
+- (BOOL)addAudio:(NSURL*)url at:(NSArray*)timings composition:(AVMutableComposition*)composition bpm:(int) bpm msPerBeat:(float)msPerBeat
 {
     // Setup defaults
     NSError *error = nil;
@@ -326,7 +326,7 @@
             [compositionAudioTrack insertEmptyTimeRange:silence];
         } else {
             // Add empty audio by beat
-            int beatToMs = intTime * msPerBeat;
+            float beatToMs = intTime * msPerBeat;
             CMTime start = kCMTimeZero;
             CMTime end = CMTimeMake(beatToMs, 1000);
             CMTimeRange silence = CMTimeRangeMake(start, end);
